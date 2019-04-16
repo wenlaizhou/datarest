@@ -23,12 +23,12 @@ var inited = false
 //
 // 配置:
 // {
-// 	enableDbApi
-// 	db.host
-// 	db.port
-// 	db.user
-// 	db.password
-// 	db.database
+// 	"enableDbApi" : true,
+// 	"db.host" : "",
+// 	"db.port" : 3306,
+// 	"db.user" : "",
+// 	"db.password" : "",
+// 	"db.database" : ""
 // }
 func InitDbApi(conf middleware.Config) {
 
