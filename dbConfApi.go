@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/wenlaizhou/middleware"
-	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -255,10 +254,10 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 
 func registerSqlConfApi(sqlApi SqlApi) {
 	if len(sqlApi.Path) <= 0 {
-		log.Printf("sqlApi注册失败 : %#v 没有服务路径", sqlApi)
+		Logger.InfoF("sqlApi注册失败 : %#v 没有服务路径", sqlApi)
 		return
 	}
-	log.Printf("注册sql api服务: %#v", sqlApi)
+	Logger.InfoF("注册sql api服务: %#v", sqlApi)
 	middleware.RegisterHandler(sqlApi.Path,
 		func(context middleware.Context) {
 			sqlApi := sqlApi
@@ -266,8 +265,8 @@ func registerSqlConfApi(sqlApi SqlApi) {
 			if middleware.ProcessError(err) {
 				jsonData = make(map[string]interface{})
 			}
-			log.Printf("sql-api 获取调用: %s", sqlApi.Path)
-			log.Printf("参数: %v", jsonData)
+			Logger.InfoF("sql-api 获取调用: %s", sqlApi.Path)
+			Logger.InfoF("参数: %v", jsonData)
 			if len(sqlApi.Must) > 0 {
 				for _, mustParam := range sqlApi.Must {
 					if v, ok := jsonData[mustParam]; !ok {

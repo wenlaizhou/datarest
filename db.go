@@ -31,20 +31,23 @@
  */
 package dbrest
 
-import _ "github.com/go-sql-driver/mysql"
+import (
+	_ "github.com/go-sql-driver/mysql"
+)
 import (
 	"encoding/json"
 	"fmt"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
 	"github.com/wenlaizhou/middleware"
-	"log"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 )
+
+var Logger = middleware.GetLogger("dbrest")
 
 type TableHandler struct {
 	TableHolder core.Table
@@ -85,8 +88,7 @@ func NewDbApi(host string,
 	orm, err := xorm.NewEngine("mysql", res.datasource)
 	// orm, err := xorm.NewEngine("sqlite3", "data.db")
 	if err != nil {
-		log.Println("数据库连接错误")
-		log.Println(err.Error())
+		Logger.ErrorF("数据库连接错误 %s", err.Error())
 		return nil, err
 	}
 	orm.ShowSQL(true)
@@ -166,23 +168,23 @@ func GetEngine() *xorm.Engine {
 func (this *DbApi) RegisterDbApi(orm interface{}) {
 	ormValue := reflect.ValueOf(orm)
 	if ormValue.Kind() != reflect.Ptr {
-		log.Println("orm 对象必须是指针")
+		Logger.Error("orm 对象必须是指针")
 		return
 	}
 	ormType := ormValue.Elem().Type()
-	log.Println("开始注册 : ", orm.(xorm.TableName).TableName())
-	log.Printf("%#v\n", orm)
+	Logger.InfoLn("开始注册 : ", orm.(xorm.TableName).TableName())
+	Logger.InfoLn("%#v\n", orm)
 	this.dataStruct[orm.(xorm.TableName).TableName()] = ormType
 	primaryIndex := -1
 	for i := 0; i < ormType.NumField(); i++ {
 		tag := ormType.Field(i).Tag.Get("xorm")
-		log.Println(tag)
+		Logger.InfoLn(tag)
 		if strings.Contains(tag, "primary") {
 			primaryIndex = i
 			break
 		}
 	}
-	log.Println(primaryIndex)
+	Logger.InfoLn(primaryIndex)
 	isExist, err := this.orm.Exist(orm)
 	middleware.ProcessError(err)
 	if !isExist {
@@ -194,14 +196,14 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			resValue := reflect.New(ormType) // INSERT INTO .. ON DUPLICATE KEY UPDATE
 			err := json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			if err != nil {
-				log.Println(err.Error())
+				Logger.InfoLn(err.Error())
 				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
-			log.Printf("%#v", resValue.Interface())
+			Logger.InfoF("%#v", resValue.Interface())
 			_, err = this.orm.Insert(resValue.Interface())
 			if err != nil {
-				log.Println(err.Error())
+				Logger.InfoLn(err.Error())
 				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
@@ -214,7 +216,7 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			resValue := reflect.New(ormType)
 			err := json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			if err != nil {
-				log.Println(err.Error())
+				Logger.InfoLn(err.Error())
 				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
@@ -222,7 +224,7 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			condition["id"], _ = strconv.Atoi(ctx.Request.URL.Query().Get("id"))
 			_, err = this.orm.Update(resValue.Interface(), condition)
 			if err != nil {
-				log.Println(err.Error())
+				Logger.InfoLn(err.Error())
 				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
@@ -235,7 +237,7 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			id, _ := strconv.Atoi(ctx.Request.URL.Query().Get("id"))
 			_, err := this.orm.Delete(map[string]interface{}{"id": id})
 			if err != nil {
-				log.Println(err.Error())
+				Logger.InfoLn(err.Error())
 				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
@@ -248,14 +250,14 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			resValue := reflect.New(ormType)
 			err := json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			if err != nil {
-				log.Println(err.Error())
+				Logger.InfoLn(err.Error())
 				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
 			res := reflect.New(reflect.SliceOf(ormType)).Interface()
 			err = this.orm.Find(res, resValue.Interface())
 			if err != nil {
-				log.Println(err.Error())
+				Logger.InfoLn(err.Error())
 				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
@@ -268,8 +270,8 @@ var reg, _ = regexp.Compile("\\$\\{(.*?)\\}")
 var idReg, _ = regexp.Compile("(\\d+)\\.id")
 
 // 写入动作日志
-func logSql(logger log.Logger, request middleware.Context, sql string, values []interface{}) {
-	logger.Printf("%s, %s\n, %s\n, %#v\n",
+func logSql(request middleware.Context, sql string, values []interface{}) {
+	Logger.InfoF("%s, %s\n, %s\n, %#v\n",
 		request.RemoteAddr(),
 		string(request.Request.UserAgent()), sql, values)
 }

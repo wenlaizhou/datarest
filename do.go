@@ -304,7 +304,7 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	return res, nil
 }
 
-// 执行统计操作
+// todo 执行统计操作
 func doCount(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{},
 	confParams map[string]string) ([]map[string]string, error) {
 

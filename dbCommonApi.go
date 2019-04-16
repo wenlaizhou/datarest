@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"github.com/go-xorm/core"
 	"github.com/wenlaizhou/middleware"
-	"log"
-	"os"
 	"strings"
 )
 
@@ -62,12 +60,9 @@ func InitDbApi(conf middleware.Config) {
 		registerTableCommonApi(*tableMeta)
 	}
 	registerTables()
-	sqlLogPath := fmt.Sprintf("%s/sql.log", conf["logPath"])
-	fs, err := os.OpenFile(sqlLogPath, os.O_CREATE|os.O_APPEND, os.ModePerm)
 	if middleware.ProcessError(err) {
 		return
 	}
-	logger := log.New(fs, "", log.LstdFlags|log.Lshortfile)
 	middleware.RegisterHandler(fmt.Sprintf("/sql"),
 		func(context middleware.Context) { // 安全
 			jsonParam, err := context.GetJSON()
@@ -98,10 +93,10 @@ func InitDbApi(conf middleware.Config) {
 				return
 			}
 
-			logSql(*logger, context, sqlStr, nil)
+			logSql(context, sqlStr, nil)
 			res, err := dbApiInstance.GetEngine().QueryString(sqlStr)
 			if !middleware.ProcessError(err) {
-				logger.Printf("%s\n, %s\n, %s\n",
+				Logger.InfoF("%s\n, %s\n, %s\n",
 					context.RemoteAddr(),
 					string(context.Request.UserAgent()),
 					sqlStr)
@@ -123,21 +118,15 @@ func registerTables() {
 }
 
 func registerTableCommonApi(tableMeta core.Table) {
-	logPath := fmt.Sprintf("%s/%s.log", Config["logPath"], tableMeta.Name)
-	fs, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND, os.ModePerm)
-	if middleware.ProcessError(err) {
-		return
-	}
-	logger := log.New(fs, "", log.LstdFlags|log.Lshortfile)
-	registerTableInsert(tableMeta, *logger)
-	registerTableUpdate(tableMeta, *logger)
-	registerTableSelect(tableMeta, *logger)
-	registerTableDelete(tableMeta, *logger)
-	registerTableCount(tableMeta, *logger)
+	registerTableInsert(tableMeta)
+	registerTableUpdate(tableMeta)
+	registerTableSelect(tableMeta)
+	registerTableDelete(tableMeta)
+	registerTableCount(tableMeta)
 	registerTableSchema(tableMeta)
 }
 
-func registerTableInsert(tableMeta core.Table, logger log.Logger) {
+func registerTableInsert(tableMeta core.Table) {
 	middleware.RegisterHandler(fmt.Sprintf("%s/insert", tableMeta.Name),
 		func(context middleware.Context) {
 			params, err := context.GetJSON()
@@ -145,7 +134,7 @@ func registerTableInsert(tableMeta core.Table, logger log.Logger) {
 				_ = context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
-			logger.Printf("获取insert调用: %v", params)
+			Logger.InfoF("获取insert调用: %v", params)
 			id, err := doInsert(*GetEngine().NewSession(), SqlConf{
 				Id:    tableMeta.Name,
 				Table: tableMeta.Name,
@@ -158,7 +147,7 @@ func registerTableInsert(tableMeta core.Table, logger log.Logger) {
 		})
 }
 
-func registerTableDelete(tableMeta core.Table, logger log.Logger) {
+func registerTableDelete(tableMeta core.Table) {
 	middleware.RegisterHandler(fmt.Sprintf("%s/delete", tableMeta.Name),
 		func(context middleware.Context) {
 			params, err := context.GetJSON()
@@ -175,12 +164,12 @@ func registerTableDelete(tableMeta core.Table, logger log.Logger) {
 				_ = context.ApiResponse(-1, "表不存在主键, 无法删除数据", nil)
 				return
 			}
-			logger.Printf("获取delete调用: %v", params)
+			Logger.InfoF("获取delete调用: %v", params)
 			primaryKey := tableMeta.PrimaryKeys[0]
 			sql := fmt.Sprintf("delete from %s where %s = ?;", tableMeta.Name, primaryKey)
 			res, err := dbApiInstance.GetEngine().Exec(sql, primaryValue)
 			if !middleware.ProcessError(err) {
-				logSql(logger, context, sql, []interface{}{primaryValue})
+				logSql(context, sql, []interface{}{primaryValue})
 				rowsAffected, err := res.RowsAffected()
 				if !middleware.ProcessError(err) {
 					_ = context.ApiResponse(0, "success", rowsAffected)
@@ -195,7 +184,7 @@ func registerTableDelete(tableMeta core.Table, logger log.Logger) {
 		})
 }
 
-func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
+func registerTableUpdate(tableMeta core.Table) {
 	middleware.RegisterHandler(fmt.Sprintf("%s/update", tableMeta.Name),
 		func(context middleware.Context) {
 			params, err := context.GetJSON()
@@ -203,7 +192,7 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 				_ = context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
-			logger.Printf("获取update调用: %v", params)
+			Logger.InfoF("获取update调用: %v", params)
 			res, err := doUpdate(*GetEngine().NewSession(), SqlConf{
 				Table: tableMeta.Name,
 			}, params)
@@ -217,14 +206,14 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 		})
 }
 
-func registerTableSelect(tableMeta core.Table, logger log.Logger) {
+func registerTableSelect(tableMeta core.Table) {
 	middleware.RegisterHandler(fmt.Sprintf("%s/select", tableMeta.Name),
 		func(context middleware.Context) {
 			params, err := context.GetJSON()
 			if err != nil {
 				params = nil
 			}
-			logger.Printf("获取select调用: %v", params)
+			Logger.InfoF("获取select调用: %v", params)
 			res, err := doSelect(*GetEngine().NewSession(), SqlConf{
 				Table:  tableMeta.Name,
 				HasSql: false,
@@ -238,14 +227,14 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 		})
 }
 
-func registerTableCount(tableMeta core.Table, logger log.Logger) {
+func registerTableCount(tableMeta core.Table) {
 	middleware.RegisterHandler(fmt.Sprintf("%s/count", tableMeta.Name),
 		func(context middleware.Context) {
 			params, err := context.GetJSON()
 			if err != nil {
 				params = nil
 			}
-			logger.Printf("获取select调用: %v", params)
+			Logger.InfoF("获取select调用: %v", params)
 			res, err := doCount(*GetEngine().NewSession(), SqlConf{
 				Table:  tableMeta.Name,
 				HasSql: false,
