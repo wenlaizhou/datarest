@@ -29,7 +29,7 @@
  *            .A3hH@#5S553&amp;@@#h   i:i9S          #@@@@@@@@@@@@@@@@@@@@@@@@@A.
  *
  */
-package database
+package dbrest
 
 import _ "github.com/go-sql-driver/mysql"
 import (
