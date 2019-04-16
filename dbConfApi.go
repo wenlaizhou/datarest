@@ -271,11 +271,11 @@ func registerSqlConfApi(sqlApi SqlApi) {
 			if len(sqlApi.Must) > 0 {
 				for _, mustParam := range sqlApi.Must {
 					if v, ok := jsonData[mustParam]; !ok {
-						context.ApiResponse(-1, fmt.Sprintf("%s为必须参数", mustParam), nil)
+						_ = context.ApiResponse(-1, fmt.Sprintf("%s为必须参数", mustParam), nil)
 						return
 					} else {
 						if v == nil {
-							context.ApiResponse(-1, fmt.Sprintf("%s为必须参数", mustParam), nil)
+							_ = context.ApiResponse(-1, fmt.Sprintf("%s为必须参数", mustParam), nil)
 							return
 						}
 					}
@@ -283,9 +283,11 @@ func registerSqlConfApi(sqlApi SqlApi) {
 			}
 			res, err := ExecSqlConfApi(jsonData, sqlApi.Path)
 			if middleware.ProcessError(err) {
-				context.ApiResponse(-1, err.Error(), nil)
+				_ = context.ApiResponse(-1, err.Error(), nil)
+				return
 			} else {
-				context.ApiResponse(0, "", res)
+				_ = context.ApiResponse(0, "", res)
+				return
 			}
 			return
 

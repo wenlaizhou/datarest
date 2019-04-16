@@ -72,29 +72,29 @@ func InitDbApi(conf middleware.Config) {
 		func(context middleware.Context) { // 安全
 			jsonParam, err := context.GetJSON()
 			if middleware.ProcessError(err) {
-				context.ApiResponse(-1, "参数错误", nil)
+				_ = context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
 			sql := jsonParam["sql"]
 			if sql == nil {
-				context.ApiResponse(-1, "参数错误", nil)
+				_ = context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
 			sqlStr, ok := sql.(string)
 			if !ok {
-				context.ApiResponse(-1, "参数错误", nil)
+				_ = context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
 
 			sqlStr = strings.TrimSpace(sqlStr)
 
 			if len(sqlStr) <= 0 {
-				context.ApiResponse(-1, "参数不包含sql", nil)
+				_ = context.ApiResponse(-1, "参数不包含sql", nil)
 				return
 			}
 
 			if strings.Contains(strings.ToUpper(sqlStr), "DELETE") {
-				context.ApiResponse(-1, "sql参数中不允许出现delete", nil)
+				_ = context.ApiResponse(-1, "sql参数中不允许出现delete", nil)
 				return
 			}
 
@@ -105,9 +105,9 @@ func InitDbApi(conf middleware.Config) {
 					context.RemoteAddr(),
 					string(context.Request.UserAgent()),
 					sqlStr)
-				context.ApiResponse(0, "", res)
+				_ = context.ApiResponse(0, "", res)
 			} else {
-				context.ApiResponse(-1, err.Error(), res)
+				_ = context.ApiResponse(-1, err.Error(), res)
 			}
 
 		})
@@ -117,7 +117,7 @@ func registerTables() {
 	middleware.RegisterHandler("/tables", func(context middleware.Context) {
 		tablesBytes, _ := json.Marshal(Tables)
 		tablesResult := string(tablesBytes)
-		context.JSON(tablesResult)
+		_ = context.JSON(tablesResult)
 		return
 	})
 }
@@ -142,7 +142,7 @@ func registerTableInsert(tableMeta core.Table, logger log.Logger) {
 		func(context middleware.Context) {
 			params, err := context.GetJSON()
 			if middleware.ProcessError(err) || len(params) <= 0 {
-				context.ApiResponse(-1, "参数错误", nil)
+				_ = context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
 			logger.Printf("获取insert调用: %v", params)
@@ -151,10 +151,10 @@ func registerTableInsert(tableMeta core.Table, logger log.Logger) {
 				Table: tableMeta.Name,
 			}, params, nil)
 			if err != nil {
-				context.ApiResponse(-1, err.Error(), nil)
+				_ = context.ApiResponse(-1, err.Error(), nil)
 				return
 			}
-			context.ApiResponse(0, "", id)
+			_ = context.ApiResponse(0, "", id)
 		})
 }
 
@@ -163,16 +163,16 @@ func registerTableDelete(tableMeta core.Table, logger log.Logger) {
 		func(context middleware.Context) {
 			params, err := context.GetJSON()
 			if err != nil || len(params) <= 0 {
-				context.ApiResponse(-1, "参数错误", nil)
+				_ = context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
 			primaryValue, ok := params["id"]
 			if !ok || primaryValue == nil {
-				context.ApiResponse(-1, "删除数据必须指定id值", nil)
+				_ = context.ApiResponse(-1, "删除数据必须指定id值", nil)
 				return
 			}
 			if len(tableMeta.PrimaryKeys) <= 0 {
-				context.ApiResponse(-1, "表不存在主键, 无法删除数据", nil)
+				_ = context.ApiResponse(-1, "表不存在主键, 无法删除数据", nil)
 				return
 			}
 			logger.Printf("获取delete调用: %v", params)
@@ -183,13 +183,13 @@ func registerTableDelete(tableMeta core.Table, logger log.Logger) {
 				logSql(logger, context, sql, []interface{}{primaryValue})
 				rowsAffected, err := res.RowsAffected()
 				if !middleware.ProcessError(err) {
-					context.ApiResponse(0, "success", rowsAffected)
+					_ = context.ApiResponse(0, "success", rowsAffected)
 					return
 				} else {
-					context.ApiResponse(-1, err.Error(), nil)
+					_ = context.ApiResponse(-1, err.Error(), nil)
 				}
 			} else {
-				context.ApiResponse(-1, err.Error(), nil)
+				_ = context.ApiResponse(-1, err.Error(), nil)
 				return
 			}
 		})
@@ -200,7 +200,7 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 		func(context middleware.Context) {
 			params, err := context.GetJSON()
 			if err != nil || len(params) <= 0 {
-				context.ApiResponse(-1, "参数错误", nil)
+				_ = context.ApiResponse(-1, "参数错误", nil)
 				return
 			}
 			logger.Printf("获取update调用: %v", params)
@@ -208,10 +208,10 @@ func registerTableUpdate(tableMeta core.Table, logger log.Logger) {
 				Table: tableMeta.Name,
 			}, params)
 			if err != nil {
-				context.ApiResponse(-1, err.Error(), nil)
+				_ = context.ApiResponse(-1, err.Error(), nil)
 				return
 			} else {
-				context.ApiResponse(0, "success", res)
+				_ = context.ApiResponse(0, "success", res)
 				return
 			}
 		})
@@ -230,10 +230,10 @@ func registerTableSelect(tableMeta core.Table, logger log.Logger) {
 				HasSql: false,
 			}, params, nil)
 			if middleware.ProcessError(err) {
-				context.ApiResponse(-1, err.Error(), nil)
+				_ = context.ApiResponse(-1, err.Error(), nil)
 				return
 			}
-			context.ApiResponse(0, "", res)
+			_ = context.ApiResponse(0, "", res)
 			return
 		})
 }
@@ -251,10 +251,10 @@ func registerTableCount(tableMeta core.Table, logger log.Logger) {
 				HasSql: false,
 			}, params, nil)
 			if middleware.ProcessError(err) {
-				context.ApiResponse(-1, err.Error(), nil)
+				_ = context.ApiResponse(-1, err.Error(), nil)
 				return
 			}
-			context.ApiResponse(0, "", res)
+			_ = context.ApiResponse(0, "", res)
 			return
 		})
 }
@@ -262,7 +262,7 @@ func registerTableCount(tableMeta core.Table, logger log.Logger) {
 func registerTableSchema(tableMeta core.Table) {
 	middleware.RegisterHandler(fmt.Sprintf("%s/schema", tableMeta.Name),
 		func(context middleware.Context) {
-			context.ApiResponse(0, "",
+			_ = context.ApiResponse(0, "",
 				tableMeta.Columns())
 		})
 }

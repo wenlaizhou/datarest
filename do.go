@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// 执行插入操作
 func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{},
 	confParams map[string]string) (interface{}, error) {
 
@@ -105,6 +106,7 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	return id, nil
 }
 
+// 执行删除操作
 func doDelete(session xorm.Session, sqlConf SqlConf,
 	requestJson map[string]interface{}) error {
 
@@ -127,6 +129,7 @@ func doDelete(session xorm.Session, sqlConf SqlConf,
 	}
 }
 
+// 执行更新操作
 func doUpdate(session xorm.Session, sqlConf SqlConf,
 	requestJson map[string]interface{}) (int64, error) {
 
@@ -180,6 +183,7 @@ func doUpdate(session xorm.Session, sqlConf SqlConf,
 	}
 }
 
+// 执行查询操作
 func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{},
 	confParams map[string]string) ([]map[string]string, error) {
 
@@ -300,6 +304,7 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	return res, nil
 }
 
+// 执行统计操作
 func doCount(session xorm.Session, sqlConf SqlConf, requestJson map[string]interface{},
 	confParams map[string]string) ([]map[string]string, error) {
 

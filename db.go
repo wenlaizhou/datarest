@@ -91,7 +91,7 @@ func NewDbApi(host string,
 	}
 	orm.ShowSQL(true)
 	if res.orm != nil {
-		res.orm.Close()
+		_ = res.orm.Close()
 	}
 	res.orm = orm
 	return res, nil
@@ -186,36 +186,48 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 	isExist, err := this.orm.Exist(orm)
 	middleware.ProcessError(err)
 	if !isExist {
-		this.orm.CreateTables(orm)
+		_ = this.orm.CreateTables(orm)
 	}
 
 	middleware.RegisterHandler(fmt.Sprintf("/%s/insert", orm.(xorm.TableName).TableName()),
 		func(ctx middleware.Context) {
 			resValue := reflect.New(ormType) // INSERT INTO .. ON DUPLICATE KEY UPDATE
-			json.Unmarshal(ctx.GetBody(), resValue.Interface())
-			log.Printf("%#v", resValue.Interface())
-			_, err := this.orm.Insert(resValue.Interface())
+			err := json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			if err != nil {
 				log.Println(err.Error())
-				ctx.ApiResponse(-1, "", nil)
+				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
-			ctx.ApiResponse(0, "", nil)
+			log.Printf("%#v", resValue.Interface())
+			_, err = this.orm.Insert(resValue.Interface())
+			if err != nil {
+				log.Println(err.Error())
+				_ = ctx.ApiResponse(-1, "", nil)
+				return
+			}
+			_ = ctx.ApiResponse(0, "", nil)
+			return
 		})
 
 	middleware.RegisterHandler(fmt.Sprintf("/%s/update", orm.(xorm.TableName).TableName()),
 		func(ctx middleware.Context) {
 			resValue := reflect.New(ormType)
-			json.Unmarshal(ctx.GetBody(), resValue.Interface())
-			condition := make(map[string]int)
-			condition["id"], _ = strconv.Atoi(ctx.Request.URL.Query().Get("id"))
-			_, err := this.orm.Update(resValue.Interface(), condition)
+			err := json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			if err != nil {
 				log.Println(err.Error())
-				ctx.ApiResponse(-1, "", nil)
+				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
-			ctx.ApiResponse(0, "", nil)
+			condition := make(map[string]int)
+			condition["id"], _ = strconv.Atoi(ctx.Request.URL.Query().Get("id"))
+			_, err = this.orm.Update(resValue.Interface(), condition)
+			if err != nil {
+				log.Println(err.Error())
+				_ = ctx.ApiResponse(-1, "", nil)
+				return
+			}
+			_ = ctx.ApiResponse(0, "", nil)
+			return
 		})
 
 	middleware.RegisterHandler(fmt.Sprintf("/%s/delete", orm.(xorm.TableName).TableName()),
@@ -224,24 +236,31 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			_, err := this.orm.Delete(map[string]interface{}{"id": id})
 			if err != nil {
 				log.Println(err.Error())
-				ctx.ApiResponse(-1, "", nil)
+				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
-			ctx.ApiResponse(0, "", nil)
+			_ = ctx.ApiResponse(0, "", nil)
+			return
 		})
 
 	middleware.RegisterHandler(fmt.Sprintf("/%s/select", orm.(xorm.TableName).TableName()),
 		func(ctx middleware.Context) {
 			resValue := reflect.New(ormType)
-			json.Unmarshal(ctx.GetBody(), resValue.Interface())
-			res := reflect.New(reflect.SliceOf(ormType)).Interface()
-			err := this.orm.Find(res, resValue.Interface())
+			err := json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			if err != nil {
 				log.Println(err.Error())
-				ctx.ApiResponse(-1, "", nil)
+				_ = ctx.ApiResponse(-1, "", nil)
 				return
 			}
-			ctx.ApiResponse(0, "", &res)
+			res := reflect.New(reflect.SliceOf(ormType)).Interface()
+			err = this.orm.Find(res, resValue.Interface())
+			if err != nil {
+				log.Println(err.Error())
+				_ = ctx.ApiResponse(-1, "", nil)
+				return
+			}
+			_ = ctx.ApiResponse(0, "", &res)
+			return
 		})
 }
 

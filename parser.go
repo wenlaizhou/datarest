@@ -41,6 +41,7 @@ func parseSql(sql string) (string, []SqlParam, []SqlParam) {
 	return sql, replaceVariables, postVariables
 }
 
+// 执行sql语句
 func exec(session xorm.Session, sqlConf SqlConf,
 	requestJson map[string]interface{}, confParams map[string]string) (interface{}, error) {
 
@@ -101,6 +102,7 @@ func exec(session xorm.Session, sqlConf SqlConf,
 	}
 }
 
+// 新增列拼接
 func appendColumnStr(columnsStr string, columnName string) string {
 	if len(columnName) <= 0 {
 		return columnsStr
@@ -112,6 +114,7 @@ func appendColumnStr(columnsStr string, columnName string) string {
 	}
 }
 
+// 新增值拼接
 func appendValueStr(valuesStr string) string {
 	if len(valuesStr) > 0 {
 		return fmt.Sprintf("%s, ?", valuesStr)
