@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-xorm/xorm"
-	"github.com/wenlaizhou/framework/framework"
+	"github.com/wenlaizhou/middleware"
 	"strings"
 )
 
@@ -46,7 +46,7 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 			continue
 		}
 	}
-	//处理is_delete
+	// 处理is_delete
 	if isDelete := tableMeta.GetColumn("is_delete"); isDelete != nil {
 		columnsStr = appendColumnStr(columnsStr, isDelete.Name)
 		if len(valuesStr) > 0 {
@@ -58,12 +58,12 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 
 	if len(tableMeta.PrimaryKeys) > 0 {
 		primaryKey := tableMeta.GetColumn(tableMeta.PrimaryKeys[0]) // 限制单一主键
-		//32位guid
+		// 32位guid
 		if primaryKey != nil && !primaryKey.IsAutoIncrement {
-			id = framework.Guid()
+			id = middleware.Guid()
 			columnsStr = appendColumnStr(columnsStr, primaryKey.Name)
 			valuesStr = appendValueStr(valuesStr)
-			if confValue, ok := confParams[primaryKey.Name]; ok { //id处理器
+			if confValue, ok := confParams[primaryKey.Name]; ok { // id处理器
 				if postReg.MatchString(confValue) {
 					confMatch := postReg.FindAllStringSubmatch(confValue, -1)
 					id = confParams[confMatch[0][1]]
@@ -93,7 +93,7 @@ func doInsert(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	}
 	sql := fmt.Sprintf("insert into %s (%s) values (%s);", tableMeta.Name, columnsStr, valuesStr)
 	res, err := session.Exec(append([]interface{}{sql}, values...)...)
-	if framework.ProcessError(err) {
+	if middleware.ProcessError(err) {
 		return nil, err
 	}
 	if lid, err := res.LastInsertId(); err == nil {
@@ -120,7 +120,7 @@ func doDelete(session xorm.Session, sqlConf SqlConf,
 	primaryKey := tableMeta.PrimaryKeys[0]
 	sql := fmt.Sprintf("delete from %s where %s = ?;", tableMeta.Name, primaryKey)
 	_, err := session.Exec(sql, primaryValue)
-	if !framework.ProcessError(err) {
+	if !middleware.ProcessError(err) {
 		return err
 	} else {
 		return nil
@@ -173,7 +173,7 @@ func doUpdate(session xorm.Session, sqlConf SqlConf,
 		columnsStr, primaryKey)
 	values = append(values, primaryValue)
 	res, err := session.Exec(append([]interface{}{sql}, values...)...)
-	if !framework.ProcessError(err) {
+	if !middleware.ProcessError(err) {
 		return -1, err
 	} else {
 		return res.RowsAffected()
@@ -190,7 +190,7 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 
 	var values []interface{}
 	columnsStr := ""
-	for k, v := range confParams { //将配置写入到请求参数中
+	for k, v := range confParams { // 将配置写入到请求参数中
 		if postReg.MatchString(v) {
 			confMatch := postReg.FindAllStringSubmatch(v, -1)
 			requestJson[k] = confParams[confMatch[0][1]]
@@ -239,7 +239,7 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 
 			continue
 		}
-		if k == "order" { //order by 处理
+		if k == "order" { // order by 处理
 			if v == nil {
 				continue
 			}
@@ -294,7 +294,7 @@ func doSelect(session xorm.Session, sqlConf SqlConf, requestJson map[string]inte
 	sql = fmt.Sprintf("%s %s %s;", sql, orderBySql, limitSql)
 
 	res, err := session.QueryString(append([]interface{}{sql}, values...)...)
-	if !framework.ProcessError(err) {
+	if !middleware.ProcessError(err) {
 		return res, err
 	}
 	return res, nil

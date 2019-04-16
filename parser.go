@@ -30,7 +30,7 @@ func parseSql(sql string) (string, []SqlParam, []SqlParam) {
 	replaceVariables := make([]SqlParam, 0)
 	replaceVariableNames := replaceReg.FindAllStringSubmatch(sql, -1)
 	for resList := range replaceVariableNames {
-		//variableNameQute := replaceVariableNames[resList][0]
+		// variableNameQute := replaceVariableNames[resList][0]
 		variableName := replaceVariableNames[resList][1]
 		replaceVariables = append(replaceVariables, SqlParam{
 			Key:  variableName,

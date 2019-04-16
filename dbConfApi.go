@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/wenlaizhou/framework/framework"
+	"github.com/wenlaizhou/middleware"
 	"log"
 	"regexp"
 	"strconv"
@@ -17,8 +17,8 @@ type SqlApi struct {
 	Transaction bool
 	Sqls        []SqlConf
 	Params      map[string]string
-	PassError   bool     //是否忽略错误, 多条sql语句时, 当其中一条出错, 会终止之后的执行
-	Must        []string //必须不为空的参数列表, 使用,分割 例如: <must>asd,ads,das</must>
+	PassError   bool     // 是否忽略错误, 多条sql语句时, 当其中一条出错, 会终止之后的执行
+	Must        []string // 必须不为空的参数列表, 使用,分割 例如: <must>asd,ads,das</must>
 }
 
 type SqlConf struct {
@@ -35,15 +35,15 @@ type SqlParam struct {
 	Type  int
 	Key   string
 	Value interface{}
-	//Id   string
+	// Id   string
 }
 
 const (
-	Post   = 0 //${}
-	Result = 1 //@{} result结果只能具有id类型
+	Post   = 0 // ${}
+	Result = 1 // @{} result结果只能具有id类型
 	Param  = 2
-	//Replace = 2 //#{}
-	//guid : {{guid}}
+	// Replace = 2 //#{}
+	// guid : {{guid}}
 )
 
 const (
@@ -58,13 +58,13 @@ const (
 	Combine = 1
 )
 
-//六种类型参数
-//1: post sql参数
-//2: result sql参数
-//3: post replace参数
-//4: result replace参数
-//5: param sql参数
-//6: param replace参数
+// 六种类型参数
+// 1: post sql参数
+// 2: result sql参数
+// 3: post replace参数
+// 4: result replace参数
+// 5: param sql参数
+// 6: param replace参数
 
 var postReg = regexp.MustCompile("\\$\\{(.*?)\\}")
 var resultReplaceReg = "#\\{%s\\.(.*?)\\}"
@@ -78,7 +78,7 @@ var sqlApis = make(map[string]SqlApi)
 //
 // 配置文件路径
 func InitSqlConfApi(filePath string) {
-	apiConf := framework.LoadXml(filePath)
+	apiConf := middleware.LoadXml(filePath)
 	apiElements := apiConf.FindElements("//sqlApi")
 	for _, apiEle := range apiElements {
 		sqlIds := make([]string, 0)
@@ -104,11 +104,11 @@ func InitSqlConfApi(filePath string) {
 				oneSql.HasSql = false
 				oneSql.Type = sqlEle.SelectAttrValue("type", "")
 				if !oneSql.HasSql && len(oneSql.Type) <= 0 {
-					//配置错误
+					// 配置错误
 				}
 			} else {
 				oneSql.HasSql = true
-				//参数计算
+				// 参数计算
 				oneSql.SqlOrigin, oneSql.RParams, oneSql.Params = parseSql(sqlStr)
 			}
 			sqlApi.Sqls = append(sqlApi.Sqls, *oneSql)
@@ -125,7 +125,7 @@ func InitSqlConfApi(filePath string) {
 			}
 		}
 
-		//注册每个配置对应的接口服务
+		// 注册每个配置对应的接口服务
 		sqlApis[sqlApi.Path] = sqlApi
 		registerSqlConfApi(sqlApi)
 	}
@@ -139,15 +139,15 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 		return nil, errors.New("没有该路径sqlApi配置")
 	}
 
-	//必须具有参数列表
+	// 必须具有参数列表
 
-	//<must>asd, asd, asd, asd</must>
+	// <must>asd, asd, asd, asd</must>
 
-	//处理guid
+	// 处理guid
 	for k, v := range sqlApi.Params {
 		sqlApiParams[k] = v
 		if v == "{{guid}}" {
-			sqlApiParams[k] = framework.Guid()
+			sqlApiParams[k] = middleware.Guid()
 		}
 	}
 
@@ -161,10 +161,10 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 	for _, sqlInstance := range sqlApi.Sqls {
 		if sqlInstance.HasSql {
 			oneSqlRes, err := exec(*session, sqlInstance, params, sqlApiParams)
-			if framework.ProcessError(err) {
+			if middleware.ProcessError(err) {
 				if !sqlApi.PassError {
 					if sqlApi.Transaction {
-						framework.ProcessError(session.Rollback())
+						middleware.ProcessError(session.Rollback())
 					}
 					return result, err
 				}
@@ -180,7 +180,7 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 			continue
 		}
 
-		//table 中含有参数类型数据, 进行处理
+		// table 中含有参数类型数据, 进行处理
 		if postReg.MatchString(sqlInstance.Table) {
 			tableParam := postReg.FindAllStringSubmatch(sqlInstance.Table, -1)
 			tableParamName := tableParam[0][1]
@@ -195,23 +195,23 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 		switch {
 		case "insert" == sqlInstance.Type:
 			id, err := doInsert(*session, sqlInstance, params, sqlApiParams)
-			if framework.ProcessError(err) {
+			if middleware.ProcessError(err) {
 				if !sqlApi.PassError {
 					if sqlApi.Transaction {
-						framework.ProcessError(session.Rollback())
+						middleware.ProcessError(session.Rollback())
 					}
 					return result, err
 				}
 			}
-			//增加id配置处理
+			// 增加id配置处理
 			sqlApiParams[fmt.Sprintf("%s.id", sqlInstance.Id)] = fmt.Sprintf("%v", id)
 			break
 		case "select" == sqlInstance.Type:
 			oneSqlRes, err := doSelect(*session, sqlInstance, params, sqlApiParams)
-			if framework.ProcessError(err) {
+			if middleware.ProcessError(err) {
 				if !sqlApi.PassError {
 					if sqlApi.Transaction {
-						framework.ProcessError(session.Rollback())
+						middleware.ProcessError(session.Rollback())
 					}
 					return result, err
 				}
@@ -220,10 +220,10 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 			break
 		case "update" == sqlInstance.Type:
 			_, err := doUpdate(*session, sqlInstance, params)
-			if framework.ProcessError(err) {
+			if middleware.ProcessError(err) {
 				if !sqlApi.PassError {
 					if sqlApi.Transaction {
-						framework.ProcessError(session.Rollback())
+						middleware.ProcessError(session.Rollback())
 					}
 					return result, err
 				}
@@ -231,10 +231,10 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 			break
 		case "delete" == sqlInstance.Type:
 			err := doDelete(*session, sqlInstance, params)
-			if framework.ProcessError(err) {
+			if middleware.ProcessError(err) {
 				if !sqlApi.PassError {
 					if sqlApi.Transaction {
-						framework.ProcessError(session.Rollback())
+						middleware.ProcessError(session.Rollback())
 					}
 					return result, err
 				}
@@ -248,7 +248,7 @@ func ExecSqlConfApi(params map[string]interface{}, path string) ([]map[string]st
 	}
 
 	if sqlApi.Transaction {
-		framework.ProcessError(session.Commit())
+		middleware.ProcessError(session.Commit())
 	}
 	return result, nil
 }
@@ -259,11 +259,11 @@ func registerSqlConfApi(sqlApi SqlApi) {
 		return
 	}
 	log.Printf("注册sql api服务: %#v", sqlApi)
-	framework.RegisterHandler(sqlApi.Path,
-		func(context framework.Context) {
+	middleware.RegisterHandler(sqlApi.Path,
+		func(context middleware.Context) {
 			sqlApi := sqlApi
 			jsonData, err := context.GetJSON()
-			if framework.ProcessError(err) {
+			if middleware.ProcessError(err) {
 				jsonData = make(map[string]interface{})
 			}
 			log.Printf("sql-api 获取调用: %s", sqlApi.Path)
@@ -282,7 +282,7 @@ func registerSqlConfApi(sqlApi SqlApi) {
 				}
 			}
 			res, err := ExecSqlConfApi(jsonData, sqlApi.Path)
-			if framework.ProcessError(err) {
+			if middleware.ProcessError(err) {
 				context.ApiResponse(-1, err.Error(), nil)
 			} else {
 				context.ApiResponse(0, "", res)

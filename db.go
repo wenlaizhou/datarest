@@ -37,7 +37,7 @@ import (
 	"fmt"
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
-	"github.com/wenlaizhou/framework/framework"
+	"github.com/wenlaizhou/middleware"
 	"log"
 	"reflect"
 	"regexp"
@@ -83,7 +83,7 @@ func NewDbApi(host string,
 	res.datasource = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8",
 		res.user, res.password, res.host, res.port, res.db)
 	orm, err := xorm.NewEngine("mysql", res.datasource)
-	//orm, err := xorm.NewEngine("sqlite3", "data.db")
+	// orm, err := xorm.NewEngine("sqlite3", "data.db")
 	if err != nil {
 		log.Println("数据库连接错误")
 		log.Println(err.Error())
@@ -104,7 +104,7 @@ func initDbApi() {
 
 	var err error
 
-	//类型判断
+	// 类型判断
 	var port int
 	switch v := Config["db.port"].(type) {
 	case int64:
@@ -126,7 +126,7 @@ func initDbApi() {
 		Config["db.user"].(string),
 		Config["db.password"].(string),
 		Config["db.database"].(string))
-	if framework.ProcessError(err) {
+	if middleware.ProcessError(err) {
 		return
 	}
 	dbApiInstance.GetEngine().ShowSQL(true)
@@ -184,14 +184,14 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 	}
 	log.Println(primaryIndex)
 	isExist, err := this.orm.Exist(orm)
-	framework.ProcessError(err)
+	middleware.ProcessError(err)
 	if !isExist {
 		this.orm.CreateTables(orm)
 	}
 
-	framework.RegisterHandler(fmt.Sprintf("/%s/insert", orm.(xorm.TableName).TableName()),
-		func(ctx framework.Context) {
-			resValue := reflect.New(ormType) //INSERT INTO .. ON DUPLICATE KEY UPDATE
+	middleware.RegisterHandler(fmt.Sprintf("/%s/insert", orm.(xorm.TableName).TableName()),
+		func(ctx middleware.Context) {
+			resValue := reflect.New(ormType) // INSERT INTO .. ON DUPLICATE KEY UPDATE
 			json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			log.Printf("%#v", resValue.Interface())
 			_, err := this.orm.Insert(resValue.Interface())
@@ -203,8 +203,8 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			ctx.ApiResponse(0, "", nil)
 		})
 
-	framework.RegisterHandler(fmt.Sprintf("/%s/update", orm.(xorm.TableName).TableName()),
-		func(ctx framework.Context) {
+	middleware.RegisterHandler(fmt.Sprintf("/%s/update", orm.(xorm.TableName).TableName()),
+		func(ctx middleware.Context) {
 			resValue := reflect.New(ormType)
 			json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			condition := make(map[string]int)
@@ -218,8 +218,8 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			ctx.ApiResponse(0, "", nil)
 		})
 
-	framework.RegisterHandler(fmt.Sprintf("/%s/delete", orm.(xorm.TableName).TableName()),
-		func(ctx framework.Context) {
+	middleware.RegisterHandler(fmt.Sprintf("/%s/delete", orm.(xorm.TableName).TableName()),
+		func(ctx middleware.Context) {
 			id, _ := strconv.Atoi(ctx.Request.URL.Query().Get("id"))
 			_, err := this.orm.Delete(map[string]interface{}{"id": id})
 			if err != nil {
@@ -230,8 +230,8 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 			ctx.ApiResponse(0, "", nil)
 		})
 
-	framework.RegisterHandler(fmt.Sprintf("/%s/select", orm.(xorm.TableName).TableName()),
-		func(ctx framework.Context) {
+	middleware.RegisterHandler(fmt.Sprintf("/%s/select", orm.(xorm.TableName).TableName()),
+		func(ctx middleware.Context) {
 			resValue := reflect.New(ormType)
 			json.Unmarshal(ctx.GetBody(), resValue.Interface())
 			res := reflect.New(reflect.SliceOf(ormType)).Interface()
@@ -248,14 +248,14 @@ func (this *DbApi) RegisterDbApi(orm interface{}) {
 var reg, _ = regexp.Compile("\\$\\{(.*?)\\}")
 var idReg, _ = regexp.Compile("(\\d+)\\.id")
 
-//写入动作日志
-func logSql(logger log.Logger, request framework.Context, sql string, values []interface{}) {
+// 写入动作日志
+func logSql(logger log.Logger, request middleware.Context, sql string, values []interface{}) {
 	logger.Printf("%s, %s\n, %s\n, %#v\n",
 		request.RemoteAddr(),
 		string(request.Request.UserAgent()), sql, values)
 }
 
-//sql 拆解
+// sql 拆解
 func explainSql(sql string, ids *[]string) (string, []string) {
 	variableNames := reg.FindAllStringSubmatch(sql, -1)
 	var variables []string
@@ -266,7 +266,7 @@ func explainSql(sql string, ids *[]string) (string, []string) {
 		variableName := variableNames[resList][1]
 		switch {
 		case variableName == "guid":
-			id := framework.Guid()
+			id := middleware.Guid()
 			sql = strings.Replace(sql, variableNameQute,
 				fmt.Sprintf("\"%s\"", id), 1)
 			*ids = append(*ids, id)
@@ -274,7 +274,7 @@ func explainSql(sql string, ids *[]string) (string, []string) {
 		case idReg.MatchString(variableName):
 			posStr := idReg.FindAllStringSubmatch(variableName, -1)
 			pos, err := strconv.ParseInt(posStr[0][1], 10, 0)
-			framework.ProcessError(err)
+			middleware.ProcessError(err)
 			sql = strings.Replace(sql, variableNameQute,
 				fmt.Sprintf("\"%s\"", (*ids)[pos]), 1)
 			break
