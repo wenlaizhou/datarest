@@ -70,7 +70,7 @@ var dbApiInstance *DbApi
 
 var dbApiInstanceLock = new(sync.Mutex)
 
-func NewDbApi(host string,
+func newXormHandler(host string,
 	port int,
 	user string,
 	password string,
@@ -99,7 +99,7 @@ func NewDbApi(host string,
 	return res, nil
 }
 
-func initDbApi() {
+func initEngine() {
 
 	dbApiInstanceLock.Lock()
 	defer dbApiInstanceLock.Unlock()
@@ -122,7 +122,7 @@ func initDbApi() {
 		port, _ = strconv.Atoi(fmt.Sprintf("%v", v))
 	}
 
-	dbApiInstance, err = NewDbApi(
+	dbApiInstance, err = newXormHandler(
 		Config["db.host"].(string),
 		port,
 		Config["db.user"].(string),

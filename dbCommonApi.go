@@ -16,12 +16,12 @@ var Config middleware.Config
 
 var inited = false
 
+// 统一入口
 // 初始化数据库连接
 // 调用该方法可重复更新配置, 重新创建连接
 //
 // 配置:
 // {
-// 	"enableDbApi" : true,
 // 	"db.host" : "",
 // 	"db.port" : 3306,
 // 	"db.user" : "",
@@ -31,19 +31,7 @@ var inited = false
 func InitDbApi(conf middleware.Config) {
 
 	Config = conf
-
-	enableDbApi, ok := Config["enableDbApi"]
-	if !ok || !enableDbApi.(bool) {
-		return
-	}
-	_, ok = conf["logPath"]
-	if !ok {
-		conf["logPath"] = "logs"
-	}
-	if !middleware.Exists(conf["logPath"].(string)) {
-		middleware.Mkdir(conf["logPath"].(string))
-	}
-	initDbApi()
+	initEngine()
 	tablesMeta, err := dbApiInstance.GetEngine().DBMetas()
 	if middleware.ProcessError(err) {
 		return
@@ -63,6 +51,7 @@ func InitDbApi(conf middleware.Config) {
 	if middleware.ProcessError(err) {
 		return
 	}
+	// 注册sql接口
 	middleware.RegisterHandler(fmt.Sprintf("/sql"),
 		func(context middleware.Context) { // 安全
 			jsonParam, err := context.GetJSON()
