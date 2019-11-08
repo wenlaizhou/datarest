@@ -107,27 +107,20 @@ func initEngine() {
 	var err error
 
 	// 类型判断
-	var port int
-	switch v := Config["db.port"].(type) {
-	case int64:
-		port = int(v)
-		break
-	case int:
-		port = v
-		break
-	case string:
-		port, _ = strconv.Atoi(v)
-		break
-	default:
-		port, _ = strconv.Atoi(fmt.Sprintf("%v", v))
+	// var port int
+	port, err := middleware.ConfInt(Config, "db.port")
+	if err != nil {
+		Logger.ErrorF("配置文件端口数据类型错误, 使用默认端口60888: %v", middleware.ConfPrint(Config))
+		port = 60888
 	}
 
 	dbApiInstance, err = newXormHandler(
-		Config["db.host"].(string),
+		middleware.ConfUnsafe(Config, "db.host"),
 		port,
-		Config["db.user"].(string),
-		Config["db.password"].(string),
-		Config["db.database"].(string))
+		middleware.ConfUnsafe(Config, "db.user"),
+		middleware.ConfUnsafe(Config, "db.password"),
+		middleware.ConfUnsafe(Config, "db.database"))
+
 	if middleware.ProcessError(err) {
 		return
 	}
